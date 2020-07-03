@@ -5,77 +5,25 @@ import com.squareup.moshi.kotlin.codegen.JsonClassCodegenProcessor
 import com.squareup.moshi.kotlinpoet.metadata.KotlinPoetMetadataPreview
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
-import kotlin.test.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvFileSource
 
 @OptIn(KotlinPoetMetadataPreview::class)
 class JsonSubtypesCodeGeneratorTest {
-    @Test
-    fun `test sealed named`() {
-        test(
-            isSealed = true,
-            isSubtypes = true,
-            expectedJson =
-                """
-                { "objects": [ {"type": "ONE", "one": 1}, {"type": "TWO", "two": 2}, {"type": "THREE", "three": 3} ] }
-                """.replace("""\s""".toRegex(), "")
-        )
-    }
-
-    @Test
-    fun `test sealed automatic`() {
-        test(
-            isSealed = true,
-            isSubtypes = false,
-            expectedJson =
-                """
-                {
-                    "objects": [
-                        {"type": "com.github.ephemient.moshi.contrib.processor.test.Root.One", "one": 1},
-                        {"type": "com.github.ephemient.moshi.contrib.processor.test.Root.Two", "two": 2},
-                        {"type": "com.github.ephemient.moshi.contrib.processor.test.Root.Nested.Three", "three": 3}
-                    ]
-                }
-                """.replace("""\s""".toRegex(), "")
-        )
-    }
-
-    @Test
-    fun `test open named`() {
-        test(
-            isSealed = false,
-            isSubtypes = true,
-            expectedJson =
-                """
-                { "objects": [ {"type": "ONE", "one": 1}, {"type": "TWO", "two": 2}, {"type": "THREE", "three": 3} ] }
-                """.replace("""\s""".toRegex(), "")
-        )
-    }
-
-    @Test
-    fun `test open automatic`() {
-        test(
-            isSealed = false,
-            isSubtypes = false,
-            expectedJson =
-                """
-                {
-                    "objects": [
-                        {"type": "com.github.ephemient.moshi.contrib.processor.test.Root.One", "one": 1},
-                        {"type": "com.github.ephemient.moshi.contrib.processor.test.Root.Two", "two": 2},
-                        {"type": "com.github.ephemient.moshi.contrib.processor.test.Root.Nested.Three", "three": 3}
-                    ]
-                }
-                """.replace("""\s""".toRegex(), "")
-        )
-    }
-
-    private fun test(isSealed: Boolean, isSubtypes: Boolean, expectedJson: String) {
+    @ParameterizedTest(name = "isSealed = {0}, isSubtypes = {1}")
+    @CsvFileSource(resources = ["JsonSubtypesCodeGeneratorTestData.csv"], numLinesToSkip = 1)
+    fun test(isSealed: Boolean, isSubtypes: Boolean, expectedJson: String) {
         val result = KotlinCompilation().apply {
             sources = listOf(mainKt(), testKt(isSealed, isSubtypes))
             annotationProcessors = listOf(JsonSubtypesCodeGenerator(), JsonClassCodegenProcessor())
             inheritClassPath = true
         }.compile()
         assertThat(result.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+        if (isSealed || isSubtypes) {
+            assertThat(result.messages).doesNotContain("Root may be open")
+        } else {
+            assertThat(result.messages).contains("Root may be open")
+        }
         val main = result.classLoader.loadClass("com.github.ephemient.moshi.contrib.processor.test.MainKt")
         assertThat(main.getMethod("stringify").invoke(null)).isEqualTo(expectedJson)
         assertThat(main.getMethod("parse", String::class.java).invoke(null, expectedJson).toString())
@@ -93,8 +41,7 @@ class JsonSubtypesCodeGeneratorTest {
         @JsonClass(generateAdapter = true)
         data class Container(val objects: List<Root>)
 
-        val moshi = Moshi.Builder()
-            .build()
+        val moshi = Moshi.Builder().build()
 
         fun stringify(): String = moshi.adapter(Container::class.java)
             .toJson(Container(listOf(Root.One(1), Root.Two(2), Root.Nested.Three(3))))
@@ -104,8 +51,7 @@ class JsonSubtypesCodeGeneratorTest {
     )
 
     private fun testKt(isSealed: Boolean, isSubtypes: Boolean): SourceFile {
-        val declaration = if (isSealed) "sealed class" else "abstract class"
-        val annotationLine = if (isSubtypes) {
+        val annotation = if (isSubtypes) {
             """
             @JsonSubTypes(
                 JsonSubTypes.Type(Root.One::class, "ONE"),
@@ -127,8 +73,8 @@ class JsonSubtypesCodeGeneratorTest {
                 generateAdapter = true,
                 generator = "com.github.ephemient.moshi.contrib.processor.JsonSubtypesCodeGenerator"
             )
-            $annotationLine
-            $declaration Root {
+            $annotation
+            ${if (isSealed) "sealed" else "abstract"} class Root {
                 @JsonClass(generateAdapter = true)
                 data class One(val one: Int) : Root()
                 @JsonClass(generateAdapter = true)

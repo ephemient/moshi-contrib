@@ -1,0 +1,5 @@
+isSealed,isSubtypes,expectedJson
+true,true,"{""objects"":[{""type"":""ONE"",""one"":1},{""type"":""TWO"",""two"":2},{""type"":""THREE"",""three"":3}]}"
+true,false,"{""objects"":[{""type"":""com.github.ephemient.moshi.contrib.processor.test.Root.One"",""one"":1},{""type"":""com.github.ephemient.moshi.contrib.processor.test.Root.Two"",""two"":2},{""type"":""com.github.ephemient.moshi.contrib.processor.test.Root.Nested.Three"",""three"":3}]}"
+false,true,"{""objects"":[{""type"":""ONE"",""one"":1},{""type"":""TWO"",""two"":2},{""type"":""THREE"",""three"":3}]}"
+false,false,"{""objects"":[{""type"":""com.github.ephemient.moshi.contrib.processor.test.Root.One"",""one"":1},{""type"":""com.github.ephemient.moshi.contrib.processor.test.Root.Two"",""two"":2},{""type"":""com.github.ephemient.moshi.contrib.processor.test.Root.Nested.Three"",""three"":3}]}"

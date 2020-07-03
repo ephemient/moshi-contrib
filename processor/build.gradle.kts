@@ -27,12 +27,12 @@ dependencies {
     implementation("com.squareup:kotlinpoet:$kotlinpoetVersion")
     implementation("com.squareup:kotlinpoet-metadata:$kotlinpoetVersion")
     implementation("com.squareup.moshi:moshi:$moshiVersion")
-    testImplementation(kotlin("test-junit5"))
     testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
     testImplementation("com.google.truth:truth:$truthVersion")
     testImplementation("com.squareup.moshi:moshi-kotlin-codegen:$moshiVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
 }
 
 tasks.withType<KotlinCompile> {
@@ -53,7 +53,7 @@ tasks.withType<Jar> {
     }
 }
 
-val dokkaJar by tasks.registering(Jar::class) { 
+val dokkaJar by tasks.registering(Jar::class) {
     group = BasePlugin.BUILD_GROUP
     description = "Assembles a jar archive containing the main kdoc."
     classifier = DocsType.JAVADOC

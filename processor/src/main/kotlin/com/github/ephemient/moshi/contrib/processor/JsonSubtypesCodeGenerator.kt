@@ -101,11 +101,9 @@ internal class JsonSubtypesCodeGenerator : AbstractProcessor() {
                 continue
             }
             val kmClass = type.getAnnotation(Metadata::class.java)?.toImmutableKmClass()
-            if (declaredSubtypes.isEmpty() && (
-                kmClass == null ||
-                    flagsOf(Flag.IS_PUBLIC, Flag.IS_PROTECTED, Flag.IS_SEALED) and kmClass.flags !=
-                    flagsOf(Flag.IS_SEALED)
-                )
+            if (declaredSubtypes.isEmpty() && kmClass?.run {
+                Flag.IS_SEALED(flags) || flagsOf(Flag.IS_PUBLIC, Flag.IS_PROTECTED) and flags == 0
+            } != true
             ) {
                 messager.printMessage(Diagnostic.Kind.WARNING, "$type may be open to extension externally")
             } else if (kmClass == null || kmClass.name.isLocal ||
@@ -175,10 +173,13 @@ internal class JsonSubtypesCodeGenerator : AbstractProcessor() {
         }
     }
 
+    @Suppress("LongMethod")
     private fun generateAdapter(type: TypeElement, subtypes: Map<TypeElement, String>): FileSpec {
         val rawTypeName = type.asClassName()
-        val typeName = rawTypeName.applyIf(type.typeParameters.isNotEmpty()) {
-            parameterizedBy(List(type.typeParameters.size) { STAR })
+        val typeName = if (type.typeParameters.isEmpty()) {
+            rawTypeName
+        } else {
+            rawTypeName.parameterizedBy(List(type.typeParameters.size) { STAR })
         }
         val adapterName = rawTypeName.simpleNames.joinToString(separator = "_", prefix = "", postfix = "JsonAdapter")
         val adapterClass = JsonAdapter::class.asClassName()
@@ -388,7 +389,4 @@ internal class JsonSubtypesCodeGenerator : AbstractProcessor() {
     }
 
     private fun Types.isStrictSubtype(t1: TypeMirror, t2: TypeMirror) = isSubtype(t1, t2) && !isSameType(t1, t2)
-
-    private inline fun <T, R> T.applyIf(condition: Boolean, block: T.() -> R): R where T : R =
-        if (condition) block() else this
 }

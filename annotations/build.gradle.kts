@@ -19,7 +19,7 @@ tasks.withType<Jar> {
     }
 }
 
-val dokkaJar by tasks.registering(Jar::class) { 
+val dokkaJar by tasks.registering(Jar::class) {
     group = BasePlugin.BUILD_GROUP
     description = "Assembles a jar archive containing the main kdoc."
     classifier = DocsType.JAVADOC
