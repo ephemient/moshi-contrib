@@ -8,10 +8,10 @@ import com.tschuchort.compiletesting.SourceFile
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvFileSource
 
-@OptIn(KotlinPoetMetadataPreview::class)
 class JsonSubtypesCodeGeneratorTest {
     @ParameterizedTest(name = "isSealed = {0}, isSubtypes = {1}")
     @CsvFileSource(resources = ["JsonSubtypesCodeGeneratorTestData.csv"], numLinesToSkip = 1)
+    @OptIn(KotlinPoetMetadataPreview::class)
     fun test(isSealed: Boolean, isSubtypes: Boolean, expectedJson: String) {
         val result = KotlinCompilation().apply {
             sources = listOf(mainKt(), testKt(isSealed, isSubtypes))
@@ -33,58 +33,57 @@ class JsonSubtypesCodeGeneratorTest {
     private fun mainKt(): SourceFile = SourceFile.kotlin(
         "main.kt",
         """
-        package com.github.ephemient.moshi.contrib.processor.test
-
-        import com.squareup.moshi.JsonClass
-        import com.squareup.moshi.Moshi
-
-        @JsonClass(generateAdapter = true)
-        data class Container(val objects: List<Root>)
-
-        val moshi = Moshi.Builder().build()
-
-        fun stringify(): String = moshi.adapter(Container::class.java)
-            .toJson(Container(listOf(Root.One(1), Root.Two(2), Root.Nested.Three(3))))
-
-        fun parse(json: String): Container? = moshi.adapter(Container::class.java).fromJson(json)
-        """.trimIndent()
+        |package com.github.ephemient.moshi.contrib.processor.test
+        |
+        |import com.squareup.moshi.JsonClass
+        |import com.squareup.moshi.Moshi
+        |
+        |@JsonClass(generateAdapter = true)
+        |data class Container(val objects: List<Root>)
+        |
+        |val moshi = Moshi.Builder().build()
+        |
+        |fun stringify(): String = moshi.adapter(Container::class.java)
+        |    .toJson(Container(listOf(Root.One(1), Root.Two(2), Root.Nested.Three(3))))
+        |
+        |fun parse(json: String): Container? = moshi.adapter(Container::class.java).fromJson(json)
+        """.trimMargin()
     )
 
     private fun testKt(isSealed: Boolean, isSubtypes: Boolean): SourceFile {
         val annotation = if (isSubtypes) {
             """
-            @JsonSubTypes(
-                JsonSubTypes.Type(Root.One::class, "ONE"),
-                JsonSubTypes.Type(Root.Two::class, "TWO"),
-                JsonSubTypes.Type(Root.Nested.Three::class, "THREE")
-            )
-            """.trimIndent().trimEnd()
+            |@JsonSubTypes(
+            |    JsonSubTypes.Type(Root.One::class, "ONE"),
+            |    JsonSubTypes.Type(Root.Two::class, "TWO"),
+            |    JsonSubTypes.Type(Root.Nested.Three::class, "THREE")
+            |)
+            """.trimMargin()
         } else ""
         return SourceFile.kotlin(
             "test.kt",
             """
-            package com.github.ephemient.moshi.contrib.processor.test
-
-            import com.squareup.moshi.JsonClass
-            import com.github.ephemient.moshi.contrib.annotations.JsonSubTypes
-            import com.github.ephemient.moshi.contrib.annotations.JsonSubTypes.Type
-
-            @JsonClass(
-                generateAdapter = true,
-                generator = "com.github.ephemient.moshi.contrib.processor.JsonSubtypesCodeGenerator"
-            )
-            $annotation
-            ${if (isSealed) "sealed" else "abstract"} class Root {
-                @JsonClass(generateAdapter = true)
-                data class One(val one: Int) : Root()
-                @JsonClass(generateAdapter = true)
-                data class Two(val two: Int) : Root()
-                sealed class Nested : Root() {
-                    @JsonClass(generateAdapter = true)
-                    data class Three(val three: Int) : Nested()
-                }
-            }
-            """
+            |package com.github.ephemient.moshi.contrib.processor.test
+            |
+            |import com.squareup.moshi.JsonClass
+            |import com.github.ephemient.moshi.contrib.annotations.JsonSubTypes
+            |import com.github.ephemient.moshi.contrib.annotations.JsonSubTypes.Type
+            |
+            |@JsonClass(
+            |    generateAdapter = true,
+            |    generator = "com.github.ephemient.moshi.contrib.processor.JsonSubtypesCodeGenerator"
+            |)
+            |$annotation${if (isSealed) "sealed" else "abstract"} class Root {
+            |    @JsonClass(generateAdapter = true)
+            |    data class One(val one: Int) : Root()
+            |    @JsonClass(generateAdapter = true)
+            |    data class Two(val two: Int) : Root()
+            |    sealed class Nested : Root() {
+            |        @JsonClass(generateAdapter = true)
+            |        data class Three(val three: Int) : Nested()
+            |    }
+            |}
+            """.trimMargin()
         )
     }
 }

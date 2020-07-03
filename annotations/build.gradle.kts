@@ -1,3 +1,5 @@
+import org.gradle.api.plugins.internal.JvmPluginsHelper
+
 plugins {
     kotlin("jvm")
     id("org.jetbrains.dokka")
@@ -6,32 +8,39 @@ plugins {
 }
 
 dependencies {
+    val moshiVersion: String by project
+
     compileOnly(kotlin("stdlib-jdk8"))
+    compileOnly("com.squareup.moshi:moshi:$moshiVersion")
 }
 
 java {
     withSourcesJar()
 }
 
-tasks.withType<Jar> {
-    if (name.capitalize().contains(JavaPlugin.JAVADOC_TASK_NAME.capitalize())) {
+when (val javadocJarTaskName = sourceSets.main.get().javadocJarTaskName) {
+    in tasks.names -> tasks.named(javadocJarTaskName, Jar::class) {
         isEnabled = false
     }
 }
 
-val dokkaJar by tasks.registering(Jar::class) {
-    group = BasePlugin.BUILD_GROUP
-    description = "Assembles a jar archive containing the main kdoc."
-    classifier = DocsType.JAVADOC
-    from(tasks["dokka"])
-    into(JavaPlugin.JAVADOC_ELEMENTS_CONFIGURATION_NAME)
-}
+JvmPluginsHelper.configureDocumentationVariantWithArtifact(
+    JavaPlugin.JAVADOC_ELEMENTS_CONFIGURATION_NAME,
+    null,
+    DocsType.JAVADOC,
+    listOf(),
+    "dokkaJar",
+    tasks.named("dokka"),
+    JvmPluginsHelper.findJavaComponent(components),
+    configurations,
+    tasks,
+    objects
+)
 
 publishing {
     publications {
         register<MavenPublication>("mavenJava") {
             from(components["java"])
-            artifact(dokkaJar.get())
         }
     }
 }

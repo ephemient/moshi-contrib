@@ -7,15 +7,16 @@ plugins {
     id("io.gitlab.arturbosch.detekt")
 }
 
-group = System.getenv("GROUP") ?: "com.github.ephemient.moshi-contrib"
-version = System.getenv("VERSION") ?: run {
+group = "com.github.ephemient.moshi-contrib"
+if (version == Project.DEFAULT_VERSION) {
     val process = ProcessBuilder("git", "describe", "--always", "--dirty=-SNAPSHOT")
         .redirectOutput(ProcessBuilder.Redirect.PIPE)
         .start()
-    process.inputStream.bufferedReader().readText()
+    val version = process.inputStream.bufferedReader().readText()
         .also { process.waitFor() }
-        .takeIf { process.exitValue() == 0 && !it.isBlank() }
-        ?.trim() ?: "unspecified-SNAPSHOT"
+        .takeIf { process.exitValue() == 0 }
+        ?.removePrefix("v")
+    if (!version.isNullOrBlank()) project.version = version.trimEnd()
 }
 
 detekt {
