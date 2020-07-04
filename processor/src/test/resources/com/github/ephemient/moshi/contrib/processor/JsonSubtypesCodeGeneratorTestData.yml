@@ -1,0 +1,159 @@
+%YAML 1.1
+---
+- &package ${PACKAGE?}
+- &sourceTemplate !format
+  - |-
+    @file:JvmName("%s_%s")
+    package %s
+    import com.github.ephemient.moshi.contrib.annotations.JsonSubTypes
+    import com.github.ephemient.moshi.contrib.annotations.JsonSubTypes.LabelKey
+    import com.github.ephemient.moshi.contrib.annotations.JsonSubTypes.Type
+    import com.google.common.truth.Truth.assertThat
+    import com.squareup.moshi.Json
+    import com.squareup.moshi.JsonClass
+    import com.squareup.moshi.Moshi
+    import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+    %%s
+    fun main() {
+    @Suppress("UNUSED_VARIABLE") val moshi = Moshi.Builder()%%s.build()
+    %%s
+    }
+  - ${TEST_CLASS?}
+  - ${TEST_METHOD?}
+  - *package
+...
+---
+name: explicit subtypes and labels
+sources:
+  test.kt: !format
+    - *sourceTemplate
+    - |-
+      data class Container(val data: List<Root>)
+      @JsonClass(generateAdapter = true, generator = "com.github.ephemient.moshi.contrib.processor.JsonSubtypesCodeGenerator")
+      @JsonSubTypes(Type(Root.One::class, "ONE"), Type(Root.Two::class, "TWO"), Type(Root.Nested.Three::class, "THREE"))
+      sealed class Root {
+        data class One(val one: Int) : Root()
+        data class Two(val two: Int) : Root()
+        sealed class Nested : Root() {
+          data class Three(val three: Int) : Nested()
+        }
+      }
+    - .add(KotlinJsonAdapterFactory())
+    - !format
+      - |-
+        val adapter = moshi.adapter(Container::class.java)
+        assertThat(adapter.toJson(%1$s)).isEqualTo("""%2$s""")
+        assertThat(adapter.fromJson("""%2$s""")).isEqualTo(%1$s)
+      - Container(listOf(Root.One(1), Root.Two(2), Root.Nested.Three(3)))
+      - '{"data":[{"type":"ONE","one":1},{"type":"TWO","two":2},{"type":"THREE","three":3}]}'
+containsMessages:
+doesNotContainMessages:
+  - Root may be open
+...
+---
+name: discovered subtypes
+sources:
+  test.kt: !format
+    - *sourceTemplate
+    - |-
+      @JsonClass(generateAdapter = true)
+      data class Container(val data: List<Root>)
+      @JsonClass(generateAdapter = true, generator = "com.github.ephemient.moshi.contrib.processor.JsonSubtypesCodeGenerator")
+      sealed class Root {
+        @JsonClass(generateAdapter = true)
+        data class One(val one: Int) : Root()
+        @JsonClass(generateAdapter = true)
+        data class Two(val two: Int) : Root()
+        sealed class Nested : Root() {
+          @JsonClass(generateAdapter = true)
+          data class Three(val three: Int) : Nested()
+        }
+      }
+    - ''
+    - !format
+      - |-
+        val adapter = moshi.adapter(Container::class.java)
+        assertThat(adapter.toJson(%1$s)).isEqualTo("""%2$s""")
+        assertThat(adapter.fromJson("""%2$s""")).isEqualTo(%1$s)
+      - Container(listOf(Root.One(1), Root.Two(2), Root.Nested.Three(3)))
+      - !format
+        - '{"data":[{"type":"%s","one":1},{"type":"%s","two":2},{"type":"%s","three":3}]}'
+        - !format ['%s.Root.One', *package]
+        - !format ['%s.Root.Two', *package]
+        - !format ['%s.Root.Nested.Three', *package]
+containsMessages:
+doesNotContainMessages:
+  - Root may be open
+...
+---
+name: custom label keys
+sources:
+  test.kt: !format
+    - *sourceTemplate
+    - |-
+      data class Container(@LabelKey("__typename") val data: Root)
+      @JsonClass(generateAdapter = true, generator = "com.github.ephemient.moshi.contrib.processor.JsonSubtypesCodeGenerator")
+      @JsonSubTypes(Type(Root.One::class, "foo"), Type(Root.Two::class))
+      @LabelKey("key1")
+      interface Root {
+        data class One(val one: Int) : Root
+        @Json(name = "bar")
+        data class Two(val two: Int) : Root
+      }
+    - .add(RootJsonAdapter.Factory()).add(KotlinJsonAdapterFactory())
+    - !format
+      - |-
+        val adapter1 = moshi.adapter(Container::class.java)
+        assertThat(adapter1.toJson(%1$s)).isEqualTo("""%2$s""")
+        assertThat(adapter1.fromJson("""%2$s""")).isEqualTo(%1$s)
+        val adapter2 = moshi.adapter(Root::class.java)
+        assertThat(adapter2.toJson(%3$s)).isEqualTo("""%4$s""")
+        assertThat(adapter2.fromJson("""%4$s""")).isEqualTo(%3$s)
+        val adapter3 = Moshi.Builder().add(RootJsonAdapter.Factory("key2")).add(KotlinJsonAdapterFactory()).build().adapter(Root::class.java)
+        assertThat(adapter3.toJson(%5$s)).isEqualTo("""%6$s""")
+        assertThat(adapter3.fromJson("""%6$s""")).isEqualTo(%5$s)
+      - Container(Root.One(1))
+      - '{"data":{"__typename":"foo","one":1}}'
+      - Root.One(1)
+      - '{"key1":"foo","one":1}'
+      - Root.Two(2)
+      - '{"key2":"bar","two":2}'
+containsMessages:
+doesNotContainMessages:
+  - Root may be open
+...
+---
+name: warnings
+sources:
+  test.kt: !format
+    - *sourceTemplate
+    - |-
+      @JsonClass(generateAdapter = true, generator = "com.github.ephemient.moshi.contrib.processor.JsonSubtypesCodeGenerator")
+      interface Root1 {
+        @JsonClass(generateAdapter = false)
+        data class One(val one: Int) : Root1
+      }
+      @JsonClass(generateAdapter = true, generator = "com.github.ephemient.moshi.contrib.processor.JsonSubtypesCodeGenerator")
+      abstract class Root2 {
+        @JsonClass(generateAdapter = false)
+        data class Two(val two: Int) : Root2()
+      }
+      @JsonClass(generateAdapter = true, generator = "com.github.ephemient.moshi.contrib.processor.JsonSubtypesCodeGenerator")
+      open class Root3 {
+        @JsonClass(generateAdapter = false)
+        data class Three(val three: Int) : Root3()
+      }
+      @JsonClass(generateAdapter = true, generator = "com.github.ephemient.moshi.contrib.processor.JsonSubtypesCodeGenerator")
+      internal interface Root4 {
+        @JsonClass(generateAdapter = false)
+        data class Four(val four: Int) : Root4
+      }
+    - ''
+    - ''
+containsMessages:
+  - Root1 may be open
+  - Root2 may be open
+  - Root3 may be open
+doesNotContainMessages:
+  - Root4 may be open
+...

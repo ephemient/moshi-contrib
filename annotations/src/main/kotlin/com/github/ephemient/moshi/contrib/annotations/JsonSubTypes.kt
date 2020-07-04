@@ -12,6 +12,12 @@ annotation class JsonSubTypes(vararg val value: Type, val factoryName: String = 
 
     @JsonQualifier
     @Retention(AnnotationRetention.RUNTIME)
-    @Target(AnnotationTarget.PROPERTY, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.FIELD)
+    @Target(
+        AnnotationTarget.CLASS,
+        AnnotationTarget.TYPE_PARAMETER,
+        AnnotationTarget.PROPERTY,
+        AnnotationTarget.VALUE_PARAMETER,
+        AnnotationTarget.FIELD
+    )
     annotation class LabelKey(val value: String)
 }

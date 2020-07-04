@@ -16,6 +16,7 @@ dependencies {
     val kotlinCompileTestingVersion: String by project
     val kotlinpoetVersion: String by project
     val moshiVersion: String by project
+    val snakeyamlVersion: String by project
     val truthVersion: String by project
 
     compileOnly("com.google.auto.service:auto-service-annotations:$autoServiceVersion")
@@ -29,10 +30,12 @@ dependencies {
     implementation("com.squareup.moshi:moshi:$moshiVersion")
     testImplementation("com.github.tschuchortdev:kotlin-compile-testing:$kotlinCompileTestingVersion")
     testImplementation("com.google.truth:truth:$truthVersion")
+    testImplementation("com.squareup.moshi:moshi-kotlin:$moshiVersion")
     testImplementation("com.squareup.moshi:moshi-kotlin-codegen:$moshiVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
+    testImplementation("org.snakeyaml:snakeyaml-engine:$snakeyamlVersion")
 }
 
 tasks.withType<KotlinCompile> {
