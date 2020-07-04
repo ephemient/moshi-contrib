@@ -20,7 +20,7 @@ class JsonSubtypesCodeGeneratorTest {
     )
     @OptIn(KotlinPoetMetadataPreview::class)
     fun test(
-        name: String,
+        @Suppress("UNUSED_PARAMETER") name: String,
         sources: Map<String, String>,
         containsMessages: List<String>?,
         doesNotContainMessages: List<String>?,
