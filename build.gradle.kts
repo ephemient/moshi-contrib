@@ -56,6 +56,12 @@ allprojects {
         jcenter()
     }
 
+    tasks.withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = "1.8"
+    }
+}
+
+gradle.afterProject {
     extensions.findByType<PublishingExtension>()?.run {
         repositories {
             maven {
@@ -67,9 +73,5 @@ allprojects {
                 }
             }
         }
-    }
-
-    tasks.withType<KotlinCompile> {
-        kotlinOptions.jvmTarget = "1.8"
     }
 }
