@@ -22,8 +22,8 @@ jobs:
       with:
         script: |
           const tagNS = "refs/tags/";
-          const ref = github.context.ref;
-          return ref.startsWith(tagNS)
+          const ref = github.ref;
+          return ref && ref.startsWith(tagNS)
             ? ref.substr(tagNS.length + (ref[tagNS.length] == "v"))
             : '';
         result-encoding: string
