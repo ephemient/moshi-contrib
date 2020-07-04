@@ -1,6 +1,6 @@
 %YAML 1.1
 ---
-- &package ${PACKAGE?}
+- &package ${TEST_PACKAGE?}
 - &sourceTemplate !format
   - |-
     @file:JvmName("%s_%s")
@@ -8,13 +8,15 @@
     import com.github.ephemient.moshi.contrib.annotations.JsonSubTypes
     import com.github.ephemient.moshi.contrib.annotations.JsonSubTypes.LabelKey
     import com.github.ephemient.moshi.contrib.annotations.JsonSubTypes.Type
+    import com.github.ephemient.truth.ThrowableSubjectBuilder.Companion.throws
+    import com.google.common.truth.StandardSubjectBuilder
     import com.google.common.truth.Truth.assertThat
     import com.squareup.moshi.Json
     import com.squareup.moshi.JsonClass
     import com.squareup.moshi.Moshi
     import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
     %%s
-    fun main() {
+    fun main(@Suppress("UNUSED_PARAMETER") expect: StandardSubjectBuilder) {
     @Suppress("UNUSED_VARIABLE") val moshi = Moshi.Builder()%%s.build()
     %%s
     }
@@ -42,8 +44,8 @@ sources:
     - !format
       - |-
         val adapter = moshi.adapter(Container::class.java)
-        assertThat(adapter.toJson(%1$s)).isEqualTo("""%2$s""")
-        assertThat(adapter.fromJson("""%2$s""")).isEqualTo(%1$s)
+        expect.that(adapter.toJson(%1$s)).isEqualTo("""%2$s""")
+        expect.that(adapter.fromJson("""%2$s""")).isEqualTo(%1$s)
       - Container(listOf(Root.One(1), Root.Two(2), Root.Nested.Three(3)))
       - '{"data":[{"type":"ONE","one":1},{"type":"TWO","two":2},{"type":"THREE","three":3}]}'
 containsMessages:
@@ -73,8 +75,8 @@ sources:
     - !format
       - |-
         val adapter = moshi.adapter(Container::class.java)
-        assertThat(adapter.toJson(%1$s)).isEqualTo("""%2$s""")
-        assertThat(adapter.fromJson("""%2$s""")).isEqualTo(%1$s)
+        expect.that(adapter.toJson(%1$s)).isEqualTo("""%2$s""")
+        expect.that(adapter.fromJson("""%2$s""")).isEqualTo(%1$s)
       - Container(listOf(Root.One(1), Root.Two(2), Root.Nested.Three(3)))
       - !format
         - '{"data":[{"type":"%s","one":1},{"type":"%s","two":2},{"type":"%s","three":3}]}'
@@ -104,14 +106,14 @@ sources:
     - !format
       - |-
         val adapter1 = moshi.adapter(Container::class.java)
-        assertThat(adapter1.toJson(%1$s)).isEqualTo("""%2$s""")
-        assertThat(adapter1.fromJson("""%2$s""")).isEqualTo(%1$s)
+        expect.that(adapter1.toJson(%1$s)).isEqualTo("""%2$s""")
+        expect.that(adapter1.fromJson("""%2$s""")).isEqualTo(%1$s)
         val adapter2 = moshi.adapter(Root::class.java)
-        assertThat(adapter2.toJson(%3$s)).isEqualTo("""%4$s""")
-        assertThat(adapter2.fromJson("""%4$s""")).isEqualTo(%3$s)
+        expect.that(adapter2.toJson(%3$s)).isEqualTo("""%4$s""")
+        expect.that(adapter2.fromJson("""%4$s""")).isEqualTo(%3$s)
         val adapter3 = Moshi.Builder().add(RootJsonAdapter.Factory("key2")).add(KotlinJsonAdapterFactory()).build().adapter(Root::class.java)
-        assertThat(adapter3.toJson(%5$s)).isEqualTo("""%6$s""")
-        assertThat(adapter3.fromJson("""%6$s""")).isEqualTo(%5$s)
+        expect.that(adapter3.toJson(%5$s)).isEqualTo("""%6$s""")
+        expect.that(adapter3.fromJson("""%6$s""")).isEqualTo(%5$s)
       - Container(Root.One(1))
       - '{"data":{"__typename":"foo","one":1}}'
       - Root.One(1)
@@ -156,4 +158,41 @@ containsMessages:
   - Root3 may be open
 doesNotContainMessages:
   - Root4 may be open
+...
+---
+name: alternate factories
+sources:
+  test.kt: !format
+    - *sourceTemplate
+    - |-
+      data class Container(val data: List<Parent>)
+      @JsonClass(generateAdapter = false)
+      @JsonSubTypes(factoryName = "CustomAdapterFactory")
+      @Json(name = "parent")
+      open class Parent(val x: Int) {
+        override fun equals(other: Any?) = other != null && this::class == other::class && x == (other as Parent).x
+        override fun hashCode() = x.hashCode()
+        override fun toString() = "Parent(x=$x)"
+      }
+      @JsonClass(generateAdapter = false)
+      @Json(name = "child")
+      class Child(x: Int, val y: Int) : Parent(x) {
+        override fun equals(other: Any?) = other != null && super.equals(other) && this::class == other::class && y == (other as Child).y
+        override fun hashCode() = x.hashCode() xor y.hashCode()
+        override fun toString() = "Child(x=$x, y=$y)"
+      }
+    - .add(KotlinJsonAdapterFactory())
+    - !format
+      - |-
+        val adapter1 = moshi.adapter(Container::class.java)
+        expect.about(throws()).that { assertThat(adapter1.toJson(%1$s)).isEqualTo("""%2$s""") }.isInstanceOf(AssertionError::class.java)
+        expect.about(throws()).that { assertThat(adapter1.fromJson("""%2$s""")).isEqualTo(%1$s) }.isInstanceOf(AssertionError::class.java)
+        val adapter2 = Moshi.Builder().add(CustomAdapterFactory("type")).add(KotlinJsonAdapterFactory()).build().adapter(Container::class.java)
+        expect.that(adapter2.toJson(%1$s)).isEqualTo("""%2$s""")
+        expect.that(adapter2.fromJson("""%2$s""")).isEqualTo(%1$s)
+      - Container(listOf(Parent(5), Child(3, 4)))
+      - '{"data":[{"type":"parent","x":5},{"type":"child","x":3,"y":4}]}'
+containsMessages:
+  - Parent may be open
+doesNotContainMessages:
 ...

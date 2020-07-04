@@ -77,7 +77,7 @@ private class CustomEnvConfig(private val context: ExtensionContext) : EnvConfig
         when (name) {
             "UNIQUE_ID" -> Optional.of(context.uniqueId)
             "DISPLAY_NAME" -> Optional.of(context.displayName)
-            "PACKAGE" -> context.testClass.map { it.`package`?.name.orEmpty() }
+            "TEST_PACKAGE" -> context.testClass.map { it.`package`?.name.orEmpty() }
             "TEST_CLASS" -> context.testClass.map { it.simpleName }
             "TEST_METHOD" -> context.testMethod.map { it.name }
             else -> context.getConfigurationParameter(name)

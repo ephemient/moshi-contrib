@@ -3,7 +3,7 @@ package com.github.ephemient.moshi.contrib.annotations
 import com.squareup.moshi.JsonQualifier
 import kotlin.reflect.KClass
 
-@Retention(AnnotationRetention.BINARY)
+@Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 @Repeatable
 annotation class JsonSubTypes(vararg val value: Type, val factoryName: String = "") {

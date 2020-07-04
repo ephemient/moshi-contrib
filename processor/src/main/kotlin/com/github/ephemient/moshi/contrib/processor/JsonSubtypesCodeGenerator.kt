@@ -84,6 +84,7 @@ class JsonSubtypesCodeGenerator : AbstractProcessor() {
     }
 
     override fun getSupportedAnnotationTypes(): Set<String> = setOf(
+        Json::class.java.canonicalName,
         JsonClass::class.java.canonicalName,
         JsonSubTypes::class.java.canonicalName,
         JsonSubTypes.LabelKey::class.java.canonicalName
@@ -93,7 +94,10 @@ class JsonSubtypesCodeGenerator : AbstractProcessor() {
 
     override fun process(annotations: Set<TypeElement>, env: RoundEnvironment): Boolean {
         val annotatedTypes = env.getElementsAnnotatedWith(JsonClass::class.java).filterIsInstance<TypeElement>()
-        for (type in annotatedTypes) {
+        for (
+            type in annotatedTypes union
+                env.getElementsAnnotatedWith(JsonSubTypes::class.java).filterIsInstance<TypeElement>()
+        ) {
             val isPrimaryGenerator = type.getAnnotationsByType(JsonClass::class.java).any {
                 it.generateAdapter && it.generator == JsonSubtypesCodeGenerator::class.qualifiedName
             }
