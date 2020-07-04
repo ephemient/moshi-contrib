@@ -56,6 +56,19 @@ allprojects {
         jcenter()
     }
 
+    extensions.findByType<PublishingExtension>()?.run {
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/ephemient/moshi-contrib")
+                credentials {
+                    username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
+                    password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+                }
+            }
+        }
+    }
+
     tasks.withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
     }
